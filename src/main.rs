@@ -56,7 +56,7 @@ struct Candidate {
 }
 
 fn main() {
-    let puzzle = Grid {
+    let mut puzzle = Grid {
         cells: [
             5, 3, 0, 0, 7, 0, 0, 0, 0, 6, 0, 0, 1, 9, 5, 0, 0, 0, 0, 9, 8, 0, 0, 0, 0, 6, 0, 8, 0,
             0, 0, 6, 0, 0, 0, 3, 4, 0, 0, 8, 0, 3, 0, 0, 1, 7, 0, 0, 0, 2, 0, 0, 0, 6, 0, 6, 0, 0,
@@ -66,43 +66,51 @@ fn main() {
 
     println!("{}", puzzle);
 
-    let solution = calculate_solution(puzzle, 0, Vec::new(), 1);
+    solve(&mut puzzle);
 
-    println!("{}", solution);
+    println!("{}", puzzle);
 }
 
-fn calculate_solution(
-    mut grid: Grid,
-    index: usize,
-    mut candidates: Vec<Candidate>,
-    initial_value: u8,
-) -> Grid {
-    if index == 81 {
-        return grid;
-    }
+fn solve(grid: &mut Grid) {
+    let mut index = 0;
+    let mut initial_value = 1;
 
-    if grid.cells[index] != 0 {
-        return calculate_solution(grid, index + 1, candidates, 1);
-    }
+    let mut candidates = Vec::new();
 
-    match generate_candidate(&grid, index, initial_value) {
-        Some(candidate) => {
-            grid.cells[index] = candidate.value;
-            candidates.push(candidate);
-            return calculate_solution(grid, index + 1, candidates, 1);
+    while index < 81 {
+        if grid.cells[index] != 0 {
+            index += 1;
+            initial_value = 1;
+
+            continue;
         }
-        None => match candidates.pop() {
+
+        match generate_candidate(&grid, index, initial_value) {
             Some(candidate) => {
-                grid.cells[candidate.index] = 0;
-                return calculate_solution(grid, candidate.index, candidates, candidate.value + 1);
+                grid.cells[index] = candidate.value;
+
+                index += 1;
+                initial_value = 1;
+
+                candidates.push(candidate);
             }
-            None => panic!("Puzzle has no solution."),
-        },
+
+            None => match candidates.pop() {
+                Some(candidate) => {
+                    grid.cells[candidate.index] = 0;
+
+                    index = candidate.index;
+                    initial_value = candidate.value + 1;
+                }
+
+                None => panic!("Puzzle has no solution."),
+            },
+        }
     }
 }
 
-fn generate_candidate(grid: &Grid, index: usize, start_value: u8) -> Option<Candidate> {
-    let mut value = start_value;
+fn generate_candidate(grid: &Grid, index: usize, initial_value: u8) -> Option<Candidate> {
+    let mut value = initial_value;
 
     return loop {
         if value > 9 {
