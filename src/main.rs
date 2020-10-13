@@ -17,7 +17,7 @@ fn main() {
 
   utils::print_grid(&puzzle.cells);
 
-  let solutions = fast_backtracking_solver::solve(puzzle.cells, true, true);
+  let solutions = fast_backtracking_solver::solve(puzzle.cells, true, true, None);
 
   println!("# of Solutions: {}", solutions.len());
 
@@ -63,7 +63,7 @@ mod generator {
 
       // NOTE - Verify that we can still solve the grid.
 
-      let solutions = fast_backtracking_solver::solve(grid, true, false);
+      let solutions = fast_backtracking_solver::solve(grid, true, false, Some(100));
 
       if solutions.len() == 0 {
         grid[index] = 0;
@@ -88,7 +88,7 @@ mod generator {
 
       grid[i] = 0;
 
-      if fast_backtracking_solver::solve(*grid, false, true).len() > 1 {
+      if fast_backtracking_solver::solve(*grid, false, true, Some(100)).len() > 1 {
         // NOTE - No longer have a unique solution, so need to revert.
         grid[i] = old_value
       } else {
@@ -226,12 +226,18 @@ mod fast_backtracking_solver {
     mut grid: utils::Cells,
     check_solvable: bool,
     check_unique: bool,
+    backtrack_threshold: Option<u32>,
   ) -> Vec<utils::Cells> {
     let mut solutions: Vec<utils::Cells> = Vec::new();
 
     let mut steps: Vec<Step> = Vec::new();
+    let mut backtracks = 0;
 
     loop {
+      if backtrack_threshold.is_some() && backtracks >= backtrack_threshold.unwrap() {
+        return solutions;
+      }
+
       match generate_step(&grid) {
         Some(mut step) => match step.candidates.pop() {
           Some(candidate) => {
@@ -243,6 +249,8 @@ mod fast_backtracking_solver {
 
           None => {
             // NOTE - No candidates left to try for this step, so back we go!
+
+            backtracks += 1;
 
             if !try_backtrack(&mut grid, &mut steps) {
               break;
@@ -274,6 +282,8 @@ mod fast_backtracking_solver {
           }
 
           // NOTE - Continue on!
+
+          backtracks += 1;
 
           if !try_backtrack(&mut grid, &mut steps) {
             break;
